@@ -6,6 +6,7 @@ import domainapp.modules.simple.dom.inventory.rule.Rule;
 import domainapp.modules.simple.dom.inventory.rule.RuleDetail;
 import domainapp.modules.simple.dom.inventory.rule.RuleDto;
 import domainapp.modules.simple.dom.inventory.rule.RuleUnit;
+import domainapp.modules.simple.dom.inventory.rule.RuleUnitDto;
 import domainapp.modules.simple.external.Record;
 import domainapp.modules.simple.external.RecordsResponse;
 import domainapp.modules.simple.service.HistoryService;
@@ -37,6 +38,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Named("simple.ProductViewModel")
 @DomainObject(nature = Nature.VIEW_MODEL)
@@ -115,6 +119,21 @@ public class ProductViewModel {
             adjustProductQuantity(ru.getProductName(), ru.getProductQuantity());
         }
         return new ProductViewModel();
+    }
+
+    @MemberSupport
+    public String validateApplyRule(RuleDto rule) throws URISyntaxException, UnsupportedEncodingException, JsonProcessingException {
+        RecordsResponse<Record<Product>> response = productService.getAllProducts();
+        List<Product> products = CommonUtil.getObjectFromResponse(response);
+        Map<String, Product> productMap = products.stream().collect(Collectors.toMap(Product::getName, Function.identity()));
+        List<RuleUnitDto> inputList = rule.getInputList();
+        for (RuleUnitDto unit : inputList) {
+            Product product = productMap.get(unit.getProductName());
+            if (product == null || product.quantity-unit.getProductQuantity() < 0) {
+                return "Not enough " + unit.getProductName() + "!";
+            }
+        }
+        return null;
     }
 
     @MemberSupport
